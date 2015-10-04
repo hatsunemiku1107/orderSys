@@ -526,9 +526,9 @@ class Order{
 	public $orderDate;
 	public $complete;
 	public $completeDate;
-	function __construct($num){
+	function __construct($orderNo){
 		$this->db = new DB();
-		$order = $this->db->getOrder($num);
+		$order = $this->db->getOrder($orderNo);
 		$this->orderNo = $order['orderNo'];
 		$this->orderQuery = $order['orderQuery'];
 		$this->orderDate = $order['orderDate'];
@@ -536,6 +536,22 @@ class Order{
 		$this->completeDate = $order['completeDate'];
 	}
 }
+class Menu{
+	private $db;
+	public $menuID;
+	public $menu_full;
+	public $description;
+	public $price;
+	function __construct($menuID){
+		$this->db = new DB();
+		$menu = $this->db->getMenu($menuID);
+		$this->menuID = $menu['menuID'];
+		$this->menu_full = $menu['menu_full'];
+		$this->description = $menu['explain'];
+		$this->price = $menu['price'];
+	}
+}
+
 //FileName
 define('FORM_ORDER', 'orderform.php');
 define('ADD_ORDER_PHP','addorder.php');//オーダー追加用のphpファイル名
