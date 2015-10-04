@@ -217,7 +217,7 @@ class DB{
 	 */
 	public function addMenu($menuID, $menu_full, $description, $price){
 		if(!($this->numericCheck($menuID))&& !($this->numericCheck($price)))return DB_ADD_MENU_ERROR;
-		$stmt = prepare("INSERT INTO menu(id, menu_full, explain, price ) VALUES (:id,':full', ':desc', price);");
+		$stmt = $this->db->prepare("INSERT INTO menu(id, menu_full, explain, price ) VALUES (:id,:full, :desc, :price);");
 		$stmt->bindParam(':id', $menuID, PDO::PARAM_INT);
 		$stmt->bindParam(':full', $menu_full, PDO::PARAM_STR);
 		$stmt->bindParam(':desc', $description, PDO::PARAM_STR);
