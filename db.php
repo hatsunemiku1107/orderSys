@@ -90,17 +90,41 @@ class DB{
 		}
 		return;
 	}
+	private function execute($stmt){
+		try{
+			$stmt->execute();
+		}catch(Exception $e){
+			//TODO;
+			$this->fatalError($e);
+		}
+	}
 	/**
 	 *Function: query($sql, &$obj)
 	 *Arguments	  :	string $sql::sqlQueryString
 	 *							object $obj::SQLクエリ実行時の返却オブジェクト
 	 *Return        : void
-	 *Date          : 2015/09/27
+	 *Date          : 2015/10/4
 	 *Comment  :
 	 */
 	private function query($sql,&$obj){
+		//PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION
 		try{
 			$obj= $this->db->query($sql);
+		}catch(Exception $e){
+			echo "<!--".$e->getTraceAsString()."-->";
+			$this->fatalError($e);
+		}
+		return;
+	}
+	function fatalError($e){
+		die();
+	}
+	private function query2($stmt, &$array){
+		//PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION
+		try{
+			$stmt->execute();
+			$array = $stmt->fetchAll();
+			if($array == FALSE) throw new Exception('DBfetchError'.__FUNCTION__);
 		}catch(Exception $e){
 			echo "<!--".$e->getTraceAsString()."-->";
 			$this->fatalError($e);
@@ -148,25 +172,38 @@ class DB{
 		preg_replace('/(\s|　|\t)/', '', $str);
 		return;
 	}
-
+	function fetch($sql, &$returnArray){
+		$this->query($sql, $result);
+		$returnArray = $result->fetchAll();
+		if($returnArray == FALSE) throw new Exception('DBfetchError'.__FUNCTION__);
+		if(count($returnArray) == 0)return DB_FETCH_EMPTY_ERROR;
+		return NO_ERROR;
+	}
+	private function SQLselectMenuFromId ($menuID, &$result){
+		$stmt = $this->db->prepare("SELECT * FROM 'menu' WHERE id=:menuID;");
+		$stmt->vindParam(':menuID', $menuID, PDO::PARAM_INT);
+		try{
+			$this->query2($stmt, $array);
+			$result = $rows[0];
+		}catch(Exception $e){
+			//TODO;
+			$this->fatalError($e);
+		}
+	}
 	/**
 	 *Function: is_menu($menuID, &$result)
 	 *Arguments	  :	int	$menuID::メニュー識別子
 	 *							bool	$result::存在(true|false)
 	 *Return        : ERROR_CODE|NO_ERROR
-	 *Date          : 2015/09/25
+	 *Date          : 2015/10/4
 	 *Comment  :メニューがすでに存在するか？
 	 */
 	public function is_menu($menuID, &$result){
 			if(!$this->numericCheck($menuID))return NOT_NUMERIC_ERROR;
-			$sql = sprintf("SELECT * FROM 'menu' WHERE id=%d;", $menuID);
-			$this->fetch($sql, $rows);
-			try{
-				if($rows == FALSE) throw new Exception('DBfetchError'.__FUNCTION__);
-			}catch(Exception $e){
-				$this->fatalError($e);
-			}
-			$result = (count($rows) > 0 && $rows[0]["id"] == $menuID)?true:false;
+			$this->SQLselectMenuFromId($menuID, $rows);
+			//$sql = sprintf("SELECT * FROM 'menu' WHERE id=%d;", $menuID);
+			//$this->fetch($sql, $rows);
+			$result = (count($rows) > 0)?true:false;
 			return NO_ERROR;
 	}
 	/**
@@ -179,10 +216,16 @@ class DB{
 	 *Date          : 2015/09/25
 	 *Comment  :
 	 */
-	public function addMenu($menuID, $menu_full, $explain, $price){
+	public function addMenu($menuID, $menu_full, $description, $price){
 		if(!($this->numericCheck($menuID))&& !($this->numericCheck($price)))return DB_ADD_MENU_ERROR;
-		$sql = sprintf("INSERT INTO menu(id, menu_full, explain, price ) VALUES (%d,'%s', '%s', %d);", $menuID, $menu_full, $explain, $price);
-		$this->exec($sql);
+		$stmt = prepare("INSERT INTO menu(id, menu_full, explain, price ) VALUES (:id,':full', ':desc', price);");
+		$stmt->bindParam(':id', $menuID, PDO::PARAM_INT);
+		$stmt->bindParam(':full', $menu_full, PDO::PARAM_STR);
+		$stmt->bindParam(':desc', $description, PDO::PARAM_STR);
+		$stmt->bindParam(':price', $price, PDO::PARAM_INT);
+		$stmt->execute();
+		//$sql = sprintf("INSERT INTO menu(id, menu_full, explain, price ) VALUES (%d,'%s', '%s', %d);", $menuID, $menu_full, $explain, $price);
+		//$this->exec($sql);
 		return NO_ERROR;
 	}
 	/**
@@ -418,9 +461,8 @@ class DB{
 	 *		}
 	 */
 	function getMenuAll(){
-		$sql = sprintf("SELECT * FROM menu ;");
-		$this->query($sql, $result);
-		$array = $result->fetchAll();
+		$sql = "SELECT * FROM menu;";
+		$this->fetch($sql, $array);
 		return $array;
 	}
 	/**
@@ -445,14 +487,6 @@ class DB{
     			string(10) "1443202825"
 		}
 	 */
-	function fetch($sql, &$returnArray){
-
-		$this->query($sql, $result);
-		$returnArray = $result->fetchAll();
-		if($returnArray == FALSE) throw new Exception('DBfetchError'.__FUNCTION__);
-		if(count($returnArray) == 0)return DB_FETCH_EMPTY_ERROR;
-		return NO_ERROR;
-	}
 	function getOrder($orderNo, &$returnArray){
 		$sql = sprintf("SELECT * FROM 'order' WHERE orderNo=%d;", $orderNo);
 		$this->fetch($sql, $returnArray);
