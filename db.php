@@ -607,6 +607,10 @@ define('INDEX_PAGE', 'index.html');
 define('VIEW_ORDER', 'top.php');
 define('QUEUE_ORDER', 'queue.php');
 define('VIEW_MENU', 'menu.php');
+define('API_ORDER_ALL','api_orderAll.php');
+define('API_ORDER_ONCE','api_order.php');
+define('API_MENU_ALL','api_menuAll.php');
+define('API_MENU_ONCE','api_menu.php');
 class HTML{
 	private $db = null;
 	private $menu;
@@ -1038,6 +1042,13 @@ EOT;
 EOT;
 		$this->makeFile4PHP($fileName, $txt);
 
+		$fileName = API_ORDER_ALL;
+		$txt = <<<EOT
+		header("Content-Type: application/json; charset=utf-8");
+		\$d = new DB();
+		 echo json_encode(\$d->getOrderAll());
+EOT;
+		$this->makeFile4PHP($fileName, $txt);
 		echo <<<EOT
 		<a href="./">完了</a>
 EOT;
