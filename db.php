@@ -383,64 +383,79 @@ class DB{
 	/**
 	 *Function:deleteOrder($orderNo)
 	 *Arguments	  :	int		$orderNo::オーダー番号
-	 *Return        : ERROR_CODE|NO_ERROR
-	 *Date          : 2015/09/25
+	 *Return        : DB_DELETE_ERROR;NO_ERROR
+	 *Date          : 2015/10/5
 	 *Comment  :未完成のオーダーを削除する
 	 */
 	public function deleteOrder($orderNo){
 		if(!$this->numericCheck($orderNo))return DB_DELETE_ERROR;
-		$sql = sprintf("DELETE FROM 'order' WHERE (orderNo = %d AND complete = 0);", $orderNo);
-		$this->exec($sql);
+		$stmt = $this->db->prepare("DELETE FROM 'order' WHERE orderNo = ?;");
+		$stmt->bindParam(1, $orderNo);
+		$this->execute($stmt);
+		//$sql = sprintf("DELETE FROM 'order' WHERE (orderNo = %d AND complete = 0);", $orderNo);
+		//$this->exec($sql);
 		return NO_ERROR;
 	}
 	/**
 	 *Function:updateOrderStatusToComplete($orderNo)
 	 *Arguments	  :	int		$orderNo::オーダー番号
-	 *Return        : ERROR_CODE|NO_ERROR
-	 *Date          : 2015/09/25
+	 *Return        : DB_UPDATE_ERRORNO_ERROR
+	 *Date          : 2015/10/5
 	 *Comment  :オーダーステータスを「完了」にする
 	 */
 	public function updateOrderStatusToComplete($orderNo){
 		if(!$this->numericCheck($orderNo))return DB_UPDATE_ERROR;
-		$time = time();
-		$sql = sprintf("UPDATE 'order' SET complete = 1, completeDate=%d WHERE (orderNo = %d AND complete = 0);" ,$time, $orderNo);
-		$this->exec($sql);
+		$stmt = $this->prepare("UPDATE 'order' SET complete = 1, completeDate=:completeDate WHERE (orderNo = :orderNo");
+		$stmt->bindValue(':completeDate', time());
+		$stmt->bindParam(':orderNo', $orderNo);
+		$this->execute($stmt);
+		//$time = time();
+		//$sql = sprintf("UPDATE 'order' SET complete = 1, completeDate=%d WHERE (orderNo = %d AND complete = 0);" ,$time, $orderNo);
+		//$this->exec($sql);
 		return NO_ERROR;
 	}
 	/**
 	 *Function:updateOrderStatusToNotComplete($orderNo)
 	 *Arguments	  :	int		$orderNo::オーダー番号
-	 *Return        : ERROR_CODE|NO_ERROR
-	 *Date          : 2015/09/27
+	 *Return        : DB_UPDATE_ERROR|NO_ERROR
+	 *Date          : 2015/10/5
 	 *Comment  :オーダーステータスを「未完了」にする
 	 */
 	public function updateOrderStatusToNotComplete($orderNo){
 		if(!$this->numericCheck($orderNo))return DB_UPDATE_ERROR;
-		$sql = sprintf("UPDATE 'order' SET complete = 0、completeDate = NULL WHERE (orderNo = %d AND complete = 1);" ,$orderNo);
-		$this->exec($sql);
+		$stmt = $this->db->prepare("UPDATE 'order' SET complete = 0、completeDate = NULL WHERE (orderNo = ? AND complete = 1");
+		$stmt->bindParam(1, $orderNo);
+		$this->execute($stmt);
+		//$sql = sprintf("UPDATE 'order' SET complete = 0、completeDate = NULL WHERE (orderNo = %d AND complete = 1);" ,$orderNo);
+		//$this->exec($sql);
 		return NO_ERROR;
 	}
 	/**
 	 *Function:updateOrderByString($orderNo, $orderStr)
 	 *Arguments	  :	int		$orderNo::オーダー番号
 	 *							string	$orderStr::オーダー
-	 *Return        : ERROR_CODE|NO_ERROR
-	 *Date          : 2015/09/27
+	 *Return        : DB_UPDATE_ERRORNO_ERROR
+	 *Date          : 2015/10/5
 	 *Comment  :オーダーを更新する
 	 */
 	function updateOrderByString($orderNo, $orderStr){
 		if(!$this->numericCheck($orderNo))return DB_UPDATE_ERROR;
-		$this->escape($orderStr);
-		$sql = sprintf("UPDATE 'order' SET orderQuery = '%s' WHERE OorderNo=%d;",$orderStr, $orderNo);
-		$this->exec($sql);
+		//$this->escape($orderStr);
+		$stmt = $this->db->prepare("UPDATE 'order' SET orderQuery = :query, orderDate = :orderDate WHERE orderNo=:orderNo");
+		$stmt->bindParam(':order', $orderStr);
+		$stmt->bindValue(':orderDate', time());
+		$stmt->bindParam('orderNo', $orderNo);
+		$this->execute($stmt);
+		//$sql = sprintf("UPDATE 'order' SET orderQuery = '%s' WHERE OorderNo=%d;",$orderStr, $orderNo);
+		//$this->exec($sql);
 		return NO_ERROR;
 	}
 	/**
 	 *Function:updateOrderByArray($orderNo, $orderArray)
 	 *Arguments	  :	int		$orderNo::オーダー番号
 	 *							array	$orderArray::オーダー
-	 *Return        : ERROR_CODE|NO_ERROR
-	 *Date          : 2015/09/27
+	 *Return        : DB_UPDATE_ERROR;NO_ERROR
+	 *Date          : 2015/10/5
 	 *Comment  :オーダーを更新する
 	 */
 	function updateOrderByArray($orderNo, $orderArray){
@@ -451,7 +466,7 @@ class DB{
 	 *Function: getMenu($MenuID)
 	 *Arguments	  :	int		$MenuID::メニュー識別子
 	 *Return        : array()
-	 *Date          : 2015/09/27
+	 *Date          : 2015/10/5
 	 *Comment  :メニュー情報を取得する
 	 *		array{
 	 *			['id']=>1
@@ -464,21 +479,22 @@ class DB{
 
 		if(!$this->numericCheck($menuID)) return NOT_NUMERIC_ERROR;
 		if(($this->is_menu($menuID, $result))!=NO_ERROR || $result == false) return  DB_GET_MENU_ERROR;
-		$sth = $this->db->prepare("SELECT * FROM menu WHERE id=?;");
-		$sth->bindParam(1,$menuID, PDO::PARAM_INT);
-		$res = $sth->execute();
-		$rows = $sth->fetchAll();
-		if($rows == FALSE) throw new Exception('DBfetchError'.__FUNCTION__);
-		if(count($rows) == 0)return DB_FETCH_EMPTY_ERROR;
+		$this->SQLselectMenuFromId($menuID, $result);
+		//$sth = $this->db->prepare("SELECT * FROM menu WHERE id=?;");
+		//$sth->bindParam(1,$menuID, PDO::PARAM_INT);
+		//$res = $sth->execute();
+		//$rows = $sth->fetchAll();
+		//if($rows == FALSE) throw new Exception('DBfetchError'.__FUNCTION__);
+		//if(count($rows) == 0)return DB_FETCH_EMPTY_ERROR;
 		//$sql = sprintf("SELECT * FROM menu WHERE id=%d;", $menuID);
 		//$this->fetch($sql, $rows);
-		return $rows[0];
+		return $result;
 	}
 	/**
 	 *Function: getMenuAll()
 	 *Arguments	  :	void
 	 *Return        : array()
-	 *Date          : 2015/09/27
+	 *Date          : 2015/10/5
 	 *Comment  :すべてのメニュー情報を取得する
 	 *		array{
 	 *			[０] => array{
@@ -491,8 +507,11 @@ class DB{
 	 *		}
 	 */
 	function getMenuAll(){
-		$sql = "SELECT * FROM menu;";
-		$this->fetch($sql, $array);
+		$stmt = $this->db->prepare("SELECT * FROM menu;");
+		$stmt->execute();
+		$array = $stmt->fetchAll();
+		//$sql = "SELECT * FROM menu;";
+		//$this->fetch($sql, $array);
 		return $array;
 	}
 	/**
