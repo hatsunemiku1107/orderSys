@@ -125,7 +125,7 @@ class DB{
 		return false;
 	}
 	/**【未実装】
-	 *Function: escapt(&$str)
+	 *Function: escap(&$str)
 	 *Arguments	  :	string $str::エスケープする文字列
 	 *Return        : true|false
 	 *Date          : 2015/09/25
@@ -550,7 +550,7 @@ class Order{
 }
 class MenuList{
 	private $db;
-	public $list = array();
+	private $list = array();
 
 	function __construct(){
 		$this->db = new DB();
@@ -559,6 +559,22 @@ class MenuList{
 			$this->list += array($list[$i]['id'] => new Menu($list[$i]['id']));
 		}
 		var_dump($this->list);
+	}
+	/**
+	 *Function: is_menu($menuID, &$result)
+	 *Arguments	  :	int	$menuID::メニュー識別子
+	 *							bool	$result::存在(true|false)
+	 *Return        : ERROR_CODE|NO_ERROR
+	 *Date          : 2015/09/25
+	 *Comment  :メニューがすでに存在するか？
+	 */
+	public function is_menu($menuID, &$result){
+		if(!$this->numericCheck($menuID))return NOT_NUMERIC_ERROR;
+		if(array_key_exists($menuID, $this->list)) $result = true;
+		else{
+			$result =  false;
+		}
+		return NO_ERROR;
 	}
 }
 class Menu{
@@ -656,12 +672,21 @@ EOM;
 				</tr>
 EOM;
 		}
+		$complete = COMPLETE_ORDER_PHP;
+		$delete = DEL_ORDER_PHP;
 		$html .=<<<EOM
 			</tr>
 			<tr>
 				<td>
 				<script>
-					function conf(txt, loc){
+				//Listener
+				window.onload = function () {
+						var complete = document.getElementById('complete');
+						var d = document.getElementById('delete');
+						complete.addEventListener('click',function(){conf('完了します', '$complete')});
+						d.addEventListener('click',function(){conf('削除します', '$delete')});
+				};
+				 function conf(txt, loc){
 						if(confirm(txt)){
 							if(confirm('本当によろしいですか？ >'+txt)){
 								var f = document.createElement("form");
@@ -677,14 +702,12 @@ EOM;
 						}
 					}
 				</script>
-EOM;
-		$html .= "<button onclick=\"conf('完了します','".COMPLETE_ORDER_PHP."')\">完了</button>\n";
-		$html .= "<button onclick=\"conf('取り消しします','".DEL_ORDER_PHP."')\">取消</button>\n";
-		$html .= <<<EOM
-				</td>
-			</tr>
-			</tbody>
-			</table>
+		<button id="complete">完了</button>
+		<button id="delete">削除</button>
+		</td>
+		</tr>
+	</tbody>
+	</table>
 EOM;
 		return $html;
 	}
