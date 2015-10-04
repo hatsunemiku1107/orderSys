@@ -518,6 +518,24 @@ class DB{
 		if($this->parseOrderToArray($ordertxt, $returnArray) == NG)return NG;
 	}
 }
+
+class Order{
+	private $db;//->getOrder($num, $order);
+	public $orderNo;
+	public $orderQuery;
+	public $orderDate;
+	public $complete;
+	public $completeDate;
+	function __construct($num){
+		$this->db = new DB();
+		$order = $this->db->getOrder($num);
+		$this->orderNo = $order['orderNo'];
+		$this->orderQuery = $order['orderQuery'];
+		$this->orderDate = $order['orderDate'];
+		$this->complete = $order['complete'];
+		$this->completeDate = $order['completeDate'];
+	}
+}
 //FileName
 define('FORM_ORDER', 'orderform.php');
 define('ADD_ORDER_PHP','addorder.php');//オーダー追加用のphpファイル名
@@ -551,31 +569,33 @@ class HTML{
 	}
 	function getHtmlHeader($title){
 		$header =  <<<EOM
-		<!DOCTYPE html>
-		<html>
-			<head>
-				<meta charset="utf-8"/>
-				<title>$title</title>
-				<link rel="stylesheet" href=""/>
-			</head>
-		<body>
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8"/>
+		<title>$title</title>
+		<link rel="stylesheet" href=""/>
+	</head>
+	<body>
 EOM;
 		return $header;
 	}
 	function drawHtmlHeader($title){
-		header("Content-Type:text/html");
+		header("Content-Type:text/html; charset=utf-8");
 		echo $this->getHtmlHeader($title);
 	}
 	function getHtmlFooter(){
 		$footer =  <<<EOM
-		</body>
-	</html>
+	</body>
+</html>
 EOM;
 		return $footer;
 	}
 	function drawHtmlFooter(){
 		echo $this->getHtmlFooter();
 	}
+
+
 	function drawOrder($num){
 		$this->db->getOrder($num, $order);
 		$orderNo = $order['orderNo'];
