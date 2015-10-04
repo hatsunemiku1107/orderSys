@@ -1,8 +1,9 @@
 <?php
 
-//エラーコード
+//判定
 define('OK',0);
 define ('NG',-1);
+//エラーコード
 define ('NO_ERROR', 0);
 define ('ERROR', -1);
 define('DB_CREATE_TABLE_ERROR', 99);
@@ -16,21 +17,28 @@ define('DB_ADD_ORDER_ERROR', 105);
 define('DB_ADD_ORDER_DUPLICATE_ERROR', 106);
 define('DB_UPDATE_ERROR', 110);
 define('DB_DELETE_ERROR', 120);
+define('NOT_NUMERIC_ERROR',300);//数値ではない
+define('DB_ACCESS_ERROR', 301);//DBのアクセス時にエラー発生
+define('DB_FETCH_EMPTY_ERROR',500);
+define('DB_GET_MENU_ERROR', 400);
 //DBの名前
 define('DATABASE_NAME', 'db.db');
 class DB{
 
 	private $db = null;
 
+	//コンストラクタ
 	function __construct(){
 		try{
 			$this->db = new PDO('sqlite:'.DATABASE_NAME);
 			$this->db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+			$this->db->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
 		} catch (PDOException $e) {
 			die ('Connection failed : '.$e->getMessage());
 		}
 		$this->initalize();
 	}
+	//デストラクタ
 	function __destruct(){
 		unset($this->db);
 	}
@@ -55,12 +63,19 @@ class DB{
   						"`price` INTEGER NOT NULL,".
   						"`sold_out` INTEGER NOT NULL DEFAULT 0);";
 			if($this->exec($sql) == NG)return NG;
+			return OK;
 	}
+	function error($e, $errorCode){
+		echo $e->getTraceAsString();
+		echo $e->getMessage();
+		return $errorCode;
+	}
+
 	/**
 	 *Function: exec($sql)
 	 *Arguments	  : string $sql::sqlQueryString
-	 *Return        : OK|NG
-	 *Date          : 2015/09/25
+	 *Return        : void
+	 *Date          : 2015/09/27
 	 *Comment  :
 	 */
 	private function exec($sql){
@@ -71,16 +86,16 @@ class DB{
 			//デバッグ用
 			echo $e->getTraceAsString();
 			echo $e->getMessage();
-			return NG;
+			$this->fatalError($e);
 		}
-		return OK;
+		return;
 	}
 	/**
 	 *Function: query($sql, &$obj)
 	 *Arguments	  :	string $sql::sqlQueryString
 	 *							object $obj::SQLクエリ実行時の返却オブジェクト
-	 *Return        : OK|NG
-	 *Date          : 2015/09/25
+	 *Return        : void
+	 *Date          : 2015/09/27
 	 *Comment  :
 	 */
 	private function query($sql,&$obj){
@@ -88,50 +103,71 @@ class DB{
 			$obj= $this->db->query($sql);
 		}catch(Exception $e){
 			echo "<!--".$e->getTraceAsString()."-->";
-			return NG;
+			$this->fatalError($e);
 		}
-		return OK;
+		return;
+	}
+	function fatalError($e){
+		die();
 	}
 	/**
 	 *Function: numericCheck(&$any)
 	 *Arguments	  :	var $any::なんでもよい
-	 *Return        : OK|NG
-	 *Date          : 2015/09/25
+	 *Return        : true|false
+	 *Date          : 2015/09/27
 	 *Comment  :数値かどうかを判定する(今後機能追加の可能性あるため関数化)
 	 */
 	public function numericCheck(&$any){
 		if(is_numeric($any)){
 			$any = intval($any);
-			return OK;
+			return true;
 		}
-		return NG;
+		return false;
+	}
+	/**【未実装】
+	 *Function: escapt(&$str)
+	 *Arguments	  :	string $str::エスケープする文字列
+	 *Return        : true|false
+	 *Date          : 2015/09/25
+	 *Comment  :文字列をエスケープ(今後機能追加の可能性あるため関数化)
+	 */
+	private function escape(&$str){
+		$res = strip_tags($str);
+		$res = htmlspecialchars($res, ENT_QUOTES);
+		$str = $res;
+		return true;
 	}
 	/**
 	 *Function:deleteSpace(&$str)
 	 *Arguments	  :	string		$str::文字列
 	 *Return        : void
 	 *Date          : 2015/09/25
-	 *Comment  :$strから全角・半角spを除去
+	 *Comment  :$strから全角・半角sp・タブを除去
 	 */
 	static public function deleteSpace(&$str){
-		preg_replace('/(\s|　)/', '', $str);
+		preg_replace('/(\s|　|\t)/', '', $str);
+		return;
 	}
 
 	/**
 	 *Function: is_menu($menuID, &$result)
 	 *Arguments	  :	int	$menuID::メニュー識別子
-	 *							bool	$result::SQLクエリ実行時の返却オブジェクト
-	 *Return        : OK|NG
+	 *							bool	$result::存在(true|false)
+	 *Return        : ERROR_CODE|NO_ERROR
 	 *Date          : 2015/09/25
 	 *Comment  :メニューがすでに存在するか？
 	 */
 	public function is_menu($menuID, &$result){
-		if($this->numericCheck($menuID) == NG)return NG;
-		$sql = sprintf("SELECT * FROM 'menu' WHERE id=%d;", $menuID);
-		if($this->query($sql, $obj) == NG)return NG;
-		$rows = $obj->fetchAll();
-		$result = ($rows[0]["id"] == $menuID)?true:false;
-		return OK;
+			if(!$this->numericCheck($menuID))return NOT_NUMERIC_ERROR;
+			$sql = sprintf("SELECT * FROM 'menu' WHERE id=%d;", $menuID);
+			$this->fetch($sql, $rows);
+			try{
+				if($rows == FALSE) throw new Exception('DBfetchError'.__FUNCTION__);
+			}catch(Exception $e){
+				$this->fatalError($e);
+			}
+			$result = (count($rows) > 0 && $rows[0]["id"] == $menuID)?true:false;
+			return NO_ERROR;
 	}
 	/**
 	 *Function: addMenu($menuID, $menu_full)
@@ -144,9 +180,9 @@ class DB{
 	 *Comment  :
 	 */
 	public function addMenu($menuID, $menu_full, $explain, $price){
-		if($this->numericCheck($menuID) == NG && $this->numericCheck($price) == NG)return DB_ADD_MENU_ERROR;
+		if(!($this->numericCheck($menuID))&& !($this->numericCheck($price)))return DB_ADD_MENU_ERROR;
 		$sql = sprintf("INSERT INTO menu(id, menu_full, explain, price ) VALUES (%d,'%s', '%s', %d);", $menuID, $menu_full, $explain, $price);
-		if($this->exec($sql) == NG)return DB_ADD_ERROR;
+		$this->exec($sql);
 		return NO_ERROR;
 	}
 	/**
@@ -157,9 +193,9 @@ class DB{
 	 *Comment  :
 	 */
 	public function deleteMenu($menuID){
-		if($this->numericCheck($menuID) == NG)return DB_DELETE_ERROR;
+		if(!$this->numericCheck($menuID))return DB_DELETE_ERROR;
 		$sql = sprintf("DELETE FROM menu WHERE id = %d", $menuID);
-		if($this->exec($sql) == NG)return DB_DELETE_ERROR;
+		$this->exec($sql);
 		return NO_ERROR;
 	}
 	/**
@@ -170,9 +206,9 @@ class DB{
 	 *Comment  :メニューのSoldOutを1にする
 	 */
 	public function updateMenuSoldOut($menuID){
-		if($this->numericCheck($menuID) == NG)return DB_UPDATE_ERROR;
+		if(!$this->numericCheck($menuID))return DB_UPDATE_ERROR;
 		$sql = sprintf("UPDATE menu SET sold_out = 1 WHERE id = %d" ,$menuID);
-		if($this->exec($sql) == NG)return DB_UPDATE_ERROR;
+		$this->db->exec($sql);
 		return NO_ERROR;
 	}
 	/**
@@ -184,9 +220,9 @@ class DB{
 	 *Comment  :メニューの	価格を変更する
 	 */
 	public function updateMenuPriceChange($menuID, $price){
-		if($this->numericCheck($menuID) == NG && $this->numericCheck($price) == NG)return DB_UPDATE_ERROR;
+		if(!$this->numericCheck($menuID)  && $this->numericCheck($price) )return DB_UPDATE_ERROR;
 		$sql = sprintf("UPDATE menu SET price=%d WHERE id = %d" ,$price, $menuID);
-		if($this->exec($sql) == NG)return DB_UPDATE_ERROR;
+		$this->exec($sql);
 		return NO_ERROR;
 	}
 	/**
@@ -198,9 +234,9 @@ class DB{
 	 *Comment  :メニューの正式名称を変更する
 	 */
 	public function updateMenuFullName($menuID,$menu_full){
-		if($this->numericCheck($menuID) == NG)return DB_UPDATE_ERROR;
+		if(!$this->numericCheck($menuID) )return DB_UPDATE_ERROR;
 		$sql = sprintf("UPDATE menu SET menu_full = '%s' WHERE id = '%d'" ,$menu_full, $menu);
-		if($this->exec($sql) == NG)return DB_UPDATE_ERROR;
+		$this->exec($sql);
 		return NO_ERROR;
 	}
 	/**
@@ -212,9 +248,9 @@ class DB{
 	 *Comment  :メニューの説明を変更する
 	 */
 	public function updateMenu($menuID,$menu_full){
-		if($this->numericCheck($menuID) == NG)return DB_UPDATE_ERROR;
+		if(!$this->numericCheck($menuID))return DB_UPDATE_ERROR;
 		$sql = sprintf("UPDATE menu SET explain = '%s' WHERE id = '%d'" ,$explain, $menu);
-		if($this->exec($sql) == NG)return DB_UPDATE_ERROR;
+		$this->exec($sql);
 		return NO_ERROR;
 	}
 	/**
@@ -243,13 +279,12 @@ class DB{
 	 *			[2]=>2
 	 *		}
 	 */
+
 	public function addOrderByArray($order, $orderNo){
 		if(!(isset($order) && is_array($order))) return DB_ADD_ORDER_ERROR;
 		if(!is_array($order))return DB_ADD_ARRAY_ERROR;
-
 		foreach ($order as $key =>$val){//メニューの存在確認
-			$this->is_menu($key,$res);
-			if($this->is_menu($key, $res) == NG || $res == false)return DB_ADD_ORDER_ERROR;
+			if($this->is_menu($key,$res) != NO_ERROR || $res == false)return DB_ADD_ERROR;//throws Exception
 		}
 		$order_str = $this->parseOrderToString($order);
 		$time = time();
@@ -261,12 +296,12 @@ class DB{
 			$sql = sprintf("SELECT * FROM 'order' WHERE orderDate = %d;", $time);
 			$obj = $this->db->query($sql);
 			$rows = $obj->fetchAll();
+			if($rows == FALSE) throw new Exception('DBfetchError'.__FUNCTION__);
 			$orderNo = $rows[0]['orderNo'];
 		}catch(Exception $e){
 			// ロールバック
 			$this->db->exec("ROLLBACK;");
-			echo $e;
-			return DB_ADD_ORDER_ERROR;
+			$this->fatalError($e);
 		}
 		// コミット
 		$this->db->exec("COMMIT;");
@@ -280,61 +315,150 @@ class DB{
 	 *Comment  :未完成のオーダーを削除する
 	 */
 	public function deleteOrder($orderNo){
+		if(!$this->numericCheck($orderNo))return DB_DELETE_ERROR;
 		$sql = sprintf("DELETE FROM 'order' WHERE (orderNo = %d AND complete = 0);", $orderNo);
-		if ($this->exec($sql) == NG)return DB_DELETE_ERROR;
+		$this->exec($sql);
 		return NO_ERROR;
 	}
 	/**
-	 *Function:updateOrderStatus($orderNo)
+	 *Function:updateOrderStatusToComplete($orderNo)
 	 *Arguments	  :	int		$orderNo::オーダー番号
 	 *Return        : ERROR_CODE|NO_ERROR
 	 *Date          : 2015/09/25
 	 *Comment  :オーダーステータスを「完了」にする
 	 */
 	public function updateOrderStatusToComplete($orderNo){
+		if(!$this->numericCheck($orderNo))return DB_UPDATE_ERROR;
 		$time = time();
 		$sql = sprintf("UPDATE 'order' SET complete = 1, completeDate=%d WHERE (orderNo = %d AND complete = 0);" ,$time, $orderNo);
-		return $this->exec($sql) == NG?DB_UPDATE_ERROR:NO_ERROR;
+		$this->exec($sql);
+		return NO_ERROR;
 	}
+	/**
+	 *Function:updateOrderStatusToNotComplete($orderNo)
+	 *Arguments	  :	int		$orderNo::オーダー番号
+	 *Return        : ERROR_CODE|NO_ERROR
+	 *Date          : 2015/09/27
+	 *Comment  :オーダーステータスを「未完了」にする
+	 */
 	public function updateOrderStatusToNotComplete($orderNo){
-		$sql = sprintf("UPDATE 'order' SET complete = 0 WHERE (orderNo = %d AND complete = 1);" ,$orderNo);
-		return $this->exec($sql) == NG?DB_UPDATE_ERROR:NO_ERROR;
+		if(!$this->numericCheck($orderNo))return DB_UPDATE_ERROR;
+		$sql = sprintf("UPDATE 'order' SET complete = 0、completeDate = NULL WHERE (orderNo = %d AND complete = 1);" ,$orderNo);
+		$this->exec($sql);
+		return NO_ERROR;
 	}
+	/**
+	 *Function:updateOrderByString($orderNo, $orderStr)
+	 *Arguments	  :	int		$orderNo::オーダー番号
+	 *							string	$orderStr::オーダー
+	 *Return        : ERROR_CODE|NO_ERROR
+	 *Date          : 2015/09/27
+	 *Comment  :オーダーを更新する
+	 */
 	function updateOrderByString($orderNo, $orderStr){
+		if(!$this->numericCheck($orderNo))return DB_UPDATE_ERROR;
+		$this->escape($orderStr);
 		$sql = sprintf("UPDATE 'order' SET orderQuery = '%s' WHERE OorderNo=%d;",$orderStr, $orderNo);
-		return $this->exec($sql) == NG?DB_UPDATE_ERROR:NO_ERROR;
+		$this->exec($sql);
+		return NO_ERROR;
 	}
+	/**
+	 *Function:updateOrderByArray($orderNo, $orderArray)
+	 *Arguments	  :	int		$orderNo::オーダー番号
+	 *							array	$orderArray::オーダー
+	 *Return        : ERROR_CODE|NO_ERROR
+	 *Date          : 2015/09/27
+	 *Comment  :オーダーを更新する
+	 */
 	function updateOrderByArray($orderNo, $orderArray){
 		$orderStr = $this->parseOrderToString($orderArray);
 		return $this->updateOrderByString($orderNo, $orderStr);
 	}
-
+	/**
+	 *Function: getMenu($MenuID)
+	 *Arguments	  :	int		$MenuID::メニュー識別子
+	 *Return        : array()
+	 *Date          : 2015/09/27
+	 *Comment  :メニュー情報を取得する
+	 *		array{
+	 *			['id']=>1
+	 *			['menu_full']=>fullMenuName
+	 *			['explain’]=>メニュー説明
+	 *			['price']=>150
+	 *		}
+	 */
 	function getMenu($menuID){
-		$this->deleteSpace($menuID);
-		$this->numericCheck($menuID);
+
+		if(!$this->numericCheck($menuID)) return NOT_NUMERIC_ERROR;
+		if(($this->is_menu($menuID, $result))!=NO_ERROR || $result == false) return  DB_GET_MENU_ERROR;
 		$sql = sprintf("SELECT * FROM menu WHERE id='%d';", $menuID);
-		$this->query($sql,$result);
-		$rows = $result->fetchAll();
+		$this->fetch($sql, $rows);
+		if($rows == FALSE) throw new Exception('DBfetchError'.__FUNCTION__);
 		return $rows[0];
 	}
+	/**
+	 *Function: getMenuAll()
+	 *Arguments	  :	void
+	 *Return        : array()
+	 *Date          : 2015/09/27
+	 *Comment  :すべてのメニュー情報を取得する
+	 *		array{
+	 *			[０] => array{
+	 *							['id']=>1
+	 *							['menu_full']=>fullMenuName
+	 *							['explain’]=>メニュー説明
+	 *							['price']=>150
+	 *						}
+	 *			[1] =>...
+	 *		}
+	 */
 	function getMenuAll(){
 		$sql = sprintf("SELECT * FROM menu ;");
 		$this->query($sql, $result);
-		$array = array();
 		$array = $result->fetchAll();
 		return $array;
 	}
-	function getOrder($orderNo){
-		$sql = sprintf("SELECT * FROM 'order' WHERE orderNo=%d;", $orderNo);
-		$result = $this->db->query($sql);
-		$rows = $result->fetchArray();
-		return $rows;
+	/**
+	 *Function:getOrderStatus($orderNo, &$retuenArray)
+	 *Arguments	  :	int		$orderNo::オーダー番号
+	 *							array	$returnArray::結果を返す
+	 *Return        : ERROR_CODE|NO_ERROR
+	 *Date          : 2015/09/25
+	 *Comment  :指定されたオーダー番号のオーダー情報を返す
+	 *
+		array(1) {
+  		  array(5) {
+    		["orderNo"]=>
+    			string(1) "1"
+    		["orderQuery"]=>
+    			string(8) "m1o2m2o1"
+    		["orderDate"]=>
+    			string(10) "1443202795"
+    		["complete"]=>
+    			string(1) "1"
+    		["completeDate"]=>
+    			string(10) "1443202825"
+		}
+	 */
+	function fetch($sql, &$returnArray){
+
+		$this->query($sql, $result);
+		$returnArray = $result->fetchAll();
+		if($returnArray == FALSE) throw new Exception('DBfetchError'.__FUNCTION__);
+		if(count($returnArray) == 0)return DB_FETCH_EMPTY_ERROR;
+		return NO_ERROR;
 	}
+	function getOrder($orderNo, &$returnArray){
+		$sql = sprintf("SELECT * FROM 'order' WHERE orderNo=%d;", $orderNo);
+		$this->fetch($sql, $returnArray);
+			$returnArray = $returnArray[0];
+		return OK;
+	}
+
 	function getOrderAll(){
 		$sql = sprintf("SELECT * FROM 'order' WHERE complete = 0;");
-		$this->query($sql, $result);
-		$array = $result->fetchAll();
-		return $array;
+		$this->fetch($sql, $returnArray);
+		return $returnArray;
 	}
 
 	function parseOrderToString($orderArray){
@@ -422,6 +546,9 @@ class HTML{
 			print $e->getTraceAsString();
 		}
 	}
+	function __destruct(){
+		unset($this->db);
+	}
 	function getHtmlHeader($title){
 		$header =  <<<EOM
 		<!DOCTYPE html>
@@ -439,23 +566,32 @@ EOM;
 		header("Content-Type:text/html");
 		echo $this->getHtmlHeader($title);
 	}
-	function drawHtmlFooter(){
-		echo <<<EOM
+	function getHtmlFooter(){
+		$footer =  <<<EOM
 		</body>
 	</html>
 EOM;
+		return $footer;
 	}
-
+	function drawHtmlFooter(){
+		echo $this->getHtmlFooter();
+	}
 	function drawOrder($num){
+		$this->db->getOrder($num, $order);
+		$orderNo = $order['orderNo'];
+		$orderQuery = $order['orderQuery'];
+		$orderDate = $order['orderDate'];
+		$complete = $order['complete'];
+		$completeDate = $order['completeDate'];
+
 		$html ="";
 		$html .=<<<EOM
 		<table border="1">
 		<thead>
 			<tr><caption>
 EOM;
-		for($i = 0; $i <count($this->order);$i++){
-			if($this->order[$i]["orderNo"] != $num)continue;
-			$html .=$this->order[$i]["orderNo"];
+			if($orderNo != $num)continue;
+			$html .=$orderNo;
 			$html .= <<<EOM
 			</caption></tr>
 					<th>オーダー内容</th><th>個数</th>
@@ -463,7 +599,7 @@ EOM;
 		<tbody>
 		<tr>
 EOM;
-			$this->db->parseOrderToArray($this->order[$i]["orderQuery"],$array);
+			$this->db->parseOrderToArray($orderQuery,$array);
 			ksort($array);
 			foreach($array as $key => $val){
 				$menu = $this->db->getMenu($key);
@@ -488,7 +624,7 @@ EOM;
 								var data = document.createElement("input");
 								data.type="hidden";
 								data.name="orderNo";
-								data.value=$num;
+								data.value=$orderNo;
 								f.appendChild(data);
 								f.submit();
 							}
@@ -503,8 +639,6 @@ EOM;
 			</tr>
 			</tbody></table>
 EOM;
-			break;
-		}
 		echo $html;
 	}
 	function drawOrderAll(){
@@ -843,4 +977,6 @@ EOT;
 		fclose($fp);
 	}
 }
+$d = new DB();
+$d->getOrder(1, $retuenArray);
 ?>
