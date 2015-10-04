@@ -594,46 +594,32 @@ EOM;
 	function drawHtmlFooter(){
 		echo $this->getHtmlFooter();
 	}
-
-
-	function drawOrder($num){
-		$this->db->getOrder($num, $order);
-		$orderNo = $order['orderNo'];
-		$orderQuery = $order['orderQuery'];
-		$orderDate = $order['orderDate'];
-		$complete = $order['complete'];
-		$completeDate = $order['completeDate'];
-
+	function getOrderTable($orderNo, $orderQuery, $orderDate, $complete, $completeDate){
 		$html ="";
 		$html .=<<<EOM
 		<table border="1">
 		<thead>
-			<tr><caption>
-EOM;
-			if($orderNo != $num)continue;
-			$html .=$orderNo;
-			$html .= <<<EOM
-			</caption></tr>
-					<th>オーダー内容</th><th>個数</th>
+			<tr><caption>$orderNo</caption></tr>
+				<th>オーダー内容</th><th>個数</th>
 		</thead>
 		<tbody>
 		<tr>
 EOM;
-			$this->db->parseOrderToArray($orderQuery,$array);
-			ksort($array);
-			foreach($array as $key => $val){
-				$menu = $this->db->getMenu($key);
-				$menu = $menu["menu_full"];
-				$html .=<<<EOM
+		$this->db->parseOrderToArray($orderQuery,$array);
+		ksort($array);
+		foreach($array as $key => $val){
+			$menu = $this->db->getMenu($key);
+			$menu = $menu["menu_full"];
+			$html .=<<<EOM
 				<tr><td>$menu</td>
 				<td>$val\0個</td>
 				</tr>
 EOM;
-			}
-			$html .=<<<EOM
+		}
+		$html .=<<<EOM
 			</tr>
 			<tr>
-			<td>
+				<td>
 				<script>
 					function conf(txt, loc){
 						if(confirm(txt)){
@@ -652,13 +638,24 @@ EOM;
 					}
 				</script>
 EOM;
-				$html .= "<button onclick=\"conf('完了します','".COMPLETE_ORDER_PHP."')\">完了</button>\n";
-				$html .= "<button onclick=\"conf('取り消しします','".DEL_ORDER_PHP."')\">取消</button>\n";
-				$html .= <<<EOM
+		$html .= "<button onclick=\"conf('完了します','".COMPLETE_ORDER_PHP."')\">完了</button>\n";
+		$html .= "<button onclick=\"conf('取り消しします','".DEL_ORDER_PHP."')\">取消</button>\n";
+		$html .= <<<EOM
 				</td>
 			</tr>
-			</tbody></table>
+			</tbody>
+			</table>
 EOM;
+		return $html;
+	}
+	function drawOrder($num){
+		$this->db->getOrder($num, $order);
+		$orderNo = $order['orderNo'];
+		$orderQuery = $order['orderQuery'];
+		$orderDate = $order['orderDate'];
+		$complete = $order['complete'];
+		$completeDate = $order['completeDate'];
+		$html = $this->getOrderTable($orderNo, $orderQuery, $orderDate, $complete, $completeDate);
 		echo $html;
 	}
 	function drawOrderAll(){
