@@ -244,7 +244,7 @@ class DB{
 		//$this->exec($sql);
 		return NO_ERROR;
 	}
-	public function updateMenuSoldStatus($menuID, $status){
+	public function updateMenuStatus($menuID, $status){
 		$stmt = $this->db->prepare("UPDATE menu SET sold_out = :sold WHERE id = :id");
 		$stmt->bindParam('sold', $status, PDO::PARAM_INT);
 		$stmt->bindParam('id', $menuID, PDO::PARAM_INT);
@@ -259,9 +259,9 @@ class DB{
 	 */
 	public function updateMenuSoldOut($menuID){
 		if(!$this->numericCheck($menuID))return DB_UPDATE_ERROR;
-
-		$sql = sprintf("UPDATE menu SET sold_out = 1 WHERE id = %d" ,$menuID);
-		$this->db->exec($sql);
+		$this->updateMenuStatus($menuID, 1);
+		//$sql = sprintf("UPDATE menu SET sold_out = 1 WHERE id = %d" ,$menuID);
+		//$this->db->exec($sql);
 		return NO_ERROR;
 	}
 	/**
@@ -269,27 +269,35 @@ class DB{
 	 *Arguments	  :	int	$menuID::メニューの識別子
 	 *							int	$price::改定後の価格
 	 *Return        : ERROR_CODE|NO_ERROR
-	 *Date          : 2015/09/25
+	 *Date          : 2015/10/4
 	 *Comment  :メニューの	価格を変更する
 	 */
 	public function updateMenuPriceChange($menuID, $price){
 		if(!$this->numericCheck($menuID)  && $this->numericCheck($price) )return DB_UPDATE_ERROR;
-		$sql = sprintf("UPDATE menu SET price=%d WHERE id = %d" ,$price, $menuID);
-		$this->exec($sql);
+		$stmt = $this->prepare("UPDATE menu SET price=:price WHERE id =:id");
+		$stmt->bindParam(':price', $price);
+		$stmt->bintParam(':id', $menuID);
+		$this->execute($stmt);
+		//$sql = sprintf("UPDATE menu SET price=%d WHERE id = %d" ,$price, $menuID);
+		//$this->exec($sql);
 		return NO_ERROR;
 	}
 	/**
 	 *Function: updateMenuFullName($menuID, $menu_full)
 	 *Arguments	  :	int		$menuID::メニューの識別子
 	 *							string	$menu_full::メニューの正式名称
-	 *Return        : ERROR_CODE|NO_ERROR
-	 *Date          : 2015/09/25
+	 *Return        : DB_UPDATE_ERROR|NO_ERROR
+	 *Date          : 2015/10/4
 	 *Comment  :メニューの正式名称を変更する
 	 */
 	public function updateMenuFullName($menuID,$menu_full){
 		if(!$this->numericCheck($menuID) )return DB_UPDATE_ERROR;
-		$sql = sprintf("UPDATE menu SET menu_full = '%s' WHERE id = '%d'" ,$menu_full, $menu);
-		$this->exec($sql);
+		$stmt = $this->prepare("UPDATE menu SET menu_full = ':full' WHERE id =:id");
+		$stmt->bindParam(':full', $menu_full);
+		$stmt->bintParam(':id', $menuID);
+		$this->execute($stmt);
+		//$sql = sprintf("UPDATE menu SET menu_full = '%s' WHERE id = '%d'" ,$menu_full, $menu);
+		//$this->exec($sql);
 		return NO_ERROR;
 	}
 	/**
