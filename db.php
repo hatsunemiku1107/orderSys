@@ -213,7 +213,7 @@ class DB{
 	 *							string	$explain::メニューの説明
 	 *							int		$price::価格
 	 *Return        : ERROR_CODE|NO_ERROR
-	 *Date          : 2015/09/25
+	 *Date          : 2015/10/4
 	 *Comment  :
 	 */
 	public function addMenu($menuID, $menu_full, $description, $price){
@@ -231,25 +231,35 @@ class DB{
 	/**
 	 *Function: deleteMenu($menuID)
 	 *Arguments	  :	int	$menuID::メニューの識別子
-	 *Return        : ERROR_CODE|NO_ERROR
-	 *Date          : 2015/09/25
+	 *Return        : DB_DELETE_ERROR|NO_ERROR
+	 *Date          : 2015/10/4
 	 *Comment  :
 	 */
 	public function deleteMenu($menuID){
 		if(!$this->numericCheck($menuID))return DB_DELETE_ERROR;
-		$sql = sprintf("DELETE FROM menu WHERE id = %d", $menuID);
-		$this->exec($sql);
+		$stmt = prepare("DELETE FROM menu WHERE id = ?;");
+		$stmt->bindParam(1, $menuID, PDO::PARAM_INT);
+		$this->execute($stmt);
+		//$sql = sprintf("DELETE FROM menu WHERE id = %d", $menuID);
+		//$this->exec($sql);
 		return NO_ERROR;
+	}
+	public function updateMenuSoldStatus($menuID, $status){
+		$stmt = $this->db->prepare("UPDATE menu SET sold_out = :sold WHERE id = :id");
+		$stmt->bindParam('sold', $status, PDO::PARAM_INT);
+		$stmt->bindParam('id', $menuID, PDO::PARAM_INT);
+		$this->execute($stmt);
 	}
 	/**
 	 *Function: updateMenuSoldOut($menuID)
 	 *Arguments	  :	int	$menuID::メニューの識別子
-	 *Return        : ERROR_CODE|NO_ERROR
-	 *Date          : 2015/09/25
+	 *Return        : DB_UPDATE_ERRORNO_ERROR
+	 *Date          : 2015/10/4
 	 *Comment  :メニューのSoldOutを1にする
 	 */
 	public function updateMenuSoldOut($menuID){
 		if(!$this->numericCheck($menuID))return DB_UPDATE_ERROR;
+
 		$sql = sprintf("UPDATE menu SET sold_out = 1 WHERE id = %d" ,$menuID);
 		$this->db->exec($sql);
 		return NO_ERROR;
