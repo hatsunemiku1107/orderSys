@@ -518,9 +518,21 @@ class DB{
 		if($this->parseOrderToArray($ordertxt, $returnArray) == NG)return NG;
 	}
 }
+class OrderList{
+	private $db;
+	public $list = array();
 
+	function __construct(){
+		$this->db = new DB();
+		$list = $this->db->getOrderAll();
+		for($i = 0; $i < count($list); $i++){
+			$this->list += array($list[$i]['orderNo'] => new Order($list[$i]['orderNo']));
+		}
+		var_dump($this->list);
+	}
+}
 class Order{
-	private $db;//->getOrder($num, $order);
+	private $db;
 	public $orderNo;
 	public $orderQuery;
 	public $orderDate;
@@ -528,12 +540,25 @@ class Order{
 	public $completeDate;
 	function __construct($orderNo){
 		$this->db = new DB();
-		$order = $this->db->getOrder($orderNo);
+		$this->db->getOrder($orderNo, $order);
 		$this->orderNo = $order['orderNo'];
 		$this->orderQuery = $order['orderQuery'];
 		$this->orderDate = $order['orderDate'];
 		$this->complete = $order['complete'];
 		$this->completeDate = $order['completeDate'];
+	}
+}
+class MenuList{
+	private $db;
+	public $list = array();
+
+	function __construct(){
+		$this->db = new DB();
+		$list = $this->db->getMenuAll();
+		for($i = 0; $i < count($list); $i++){
+			$this->list += array($list[$i]['id'] => new Menu($list[$i]['id']));
+		}
+		var_dump($this->list);
 	}
 }
 class Menu{
@@ -545,7 +570,7 @@ class Menu{
 	function __construct($menuID){
 		$this->db = new DB();
 		$menu = $this->db->getMenu($menuID);
-		$this->menuID = $menu['menuID'];
+		$this->menuID = $menu['id'];
 		$this->menu_full = $menu['menu_full'];
 		$this->description = $menu['explain'];
 		$this->price = $menu['price'];
@@ -555,7 +580,6 @@ class Menu{
 //FileName
 define('FORM_ORDER', 'orderform.php');
 define('ADD_ORDER_PHP','addorder.php');//オーダー追加用のphpファイル名
-//define('ADD_ORDER_HTML', 'addorder.html');//オーダー追加用小野HTMLファイル名
 define('DEL_ORDER_HTML', 'deleteorder.html');//オーダー削除HTML
 define('DEL_ORDER_PHP', 'delorder.php');//オーダー削除PHP
 define('COMPLETE_ORDER_PHP', 'completeorder.php');//オーダー完了
