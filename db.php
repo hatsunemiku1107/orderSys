@@ -116,9 +116,6 @@ class DB{
 		}
 		return;
 	}
-	function fatalError($e){
-		die();
-	}
 	private function query2($stmt, &$array){
 		//PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION
 		try{
@@ -131,7 +128,9 @@ class DB{
 		}
 		return;
 	}
+
 	function fatalError($e){
+		var_dump($e);
 		die();
 	}
 	/**
@@ -181,9 +180,9 @@ class DB{
 	}
 	private function SQLselectMenuFromId ($menuID, &$result){
 		$stmt = $this->db->prepare("SELECT * FROM 'menu' WHERE id=:menuID;");
-		$stmt->vindParam(':menuID', $menuID, PDO::PARAM_INT);
+		$stmt->bindParam(':menuID', $menuID, PDO::PARAM_INT);
 		try{
-			$this->query2($stmt, $array);
+			$this->query2($stmt, $rows);
 			$result = $rows[0];
 		}catch(Exception $e){
 			//TODO;
@@ -304,14 +303,18 @@ class DB{
 	 *Function: updateMenuExplain($menuID, $explain)
 	 *Arguments	  :	char		$menuID::メニューの識別子
 	 *							string	$menu_full::メニューの説明
-	 *Return        : ERROR_CODE|NO_ERROR
-	 *Date          : 2015/09/25
+	 *Return        : DB_UPDATE_ERROR|NO_ERROR
+	 *Date          : 2015/10/4
 	 *Comment  :メニューの説明を変更する
 	 */
-	public function updateMenu($menuID,$menu_full){
+	public function updateMenuDescription($menuID,$description){
 		if(!$this->numericCheck($menuID))return DB_UPDATE_ERROR;
-		$sql = sprintf("UPDATE menu SET explain = '%s' WHERE id = '%d'" ,$explain, $menu);
-		$this->exec($sql);
+		$stmt = $this->db->prepare("UPDATE menu SET explain = ':desc' WHERE id =:id");
+		$stmt->bindParam(':desc', $description);
+		$stmt->bintParam(':id', $menuID);
+		$this->execute($stmt);
+		//$sql = sprintf("UPDATE menu SET explain = '%s' WHERE id = '%d'" ,$explain, $menu);
+		//$this->exec($sql);
 		return NO_ERROR;
 	}
 	/**
@@ -348,24 +351,33 @@ class DB{
 			if($this->is_menu($key,$res) != NO_ERROR || $res == false)return DB_ADD_ERROR;//throws Exception
 		}
 		$order_str = $this->parseOrderToString($order);
-		$time = time();
+		//$time = time();
 		try{
 			//トランザクション開始
-			$this->db->exec("BEGIN DEFERRED;");
-			$sql = sprintf("INSERT INTO 'order'('orderQuery', 'orderDate', 'complete') values ('%s', %d, 0);",  $order_str, $time);
-			$this->db->exec($sql);
-			$sql = sprintf("SELECT * FROM 'order' WHERE orderDate = %d;", $time);
-			$obj = $this->db->query($sql);
-			$rows = $obj->fetchAll();
-			if($rows == FALSE) throw new Exception('DBfetchError'.__FUNCTION__);
-			$orderNo = $rows[0]['orderNo'];
+			$this->db->beginTransaction();
+			$stmt = $this->db->prepare("INSERT INTO 'order' ('orderQuery', 'orderDate', 'complete') values (?, ?,  0);");
+			$stmt->bindParam(1, $order_str, PDO::PARAM_STR);
+			$stmt->bindValue(2, time());
+			$stmt->execute();
+			$orderNo = $this->db->lastInsertId();
+			//$orderNo = $stmt->lastInsertId();
+			//$this->db->exec("BEGIN DEFERRED;");
+			//$sql = sprintf("INSERT INTO 'order'('orderQuery', 'orderDate', 'complete') values ('%s', %d, 0);",  $order_str, $time);
+			//$this->db->exec($sql);
+			//$sql = sprintf("SELECT * FROM 'order' WHERE orderDate = %d;", $time);
+			//$obj = $this->db->query($sql);
+			//$rows = $obj->fetchAll();
+			//if($rows == FALSE) throw new Exception('DBfetchError'.__FUNCTION__);
+			//$orderNo = $rows[0]['orderNo'];
 		}catch(Exception $e){
 			// ロールバック
-			$this->db->exec("ROLLBACK;");
+			$this->db->rollback();
+			//$this->db->exec("ROLLBACK;");
 			$this->fatalError($e);
 		}
 		// コミット
-		$this->db->exec("COMMIT;");
+		$this->db->commit();
+		//$this->db->exec("COMMIT;");
 		return NO_ERROR;
 	}
 	/**
