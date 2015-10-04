@@ -391,9 +391,14 @@ class DB{
 
 		if(!$this->numericCheck($menuID)) return NOT_NUMERIC_ERROR;
 		if(($this->is_menu($menuID, $result))!=NO_ERROR || $result == false) return  DB_GET_MENU_ERROR;
-		$sql = sprintf("SELECT * FROM menu WHERE id='%d';", $menuID);
-		$this->fetch($sql, $rows);
+		$sth = $this->db->prepare("SELECT * FROM menu WHERE id=?;");
+		$sth->bindParam(1,$menuID, PDO::PARAM_INT);
+		$res = $sth->execute();
+		$rows = $sth->fetchAll();
 		if($rows == FALSE) throw new Exception('DBfetchError'.__FUNCTION__);
+		if(count($rows) == 0)return DB_FETCH_EMPTY_ERROR;
+		//$sql = sprintf("SELECT * FROM menu WHERE id=%d;", $menuID);
+		//$this->fetch($sql, $rows);
 		return $rows[0];
 	}
 	/**
