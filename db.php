@@ -189,6 +189,17 @@ class DB{
 			$this->fatalError($e);
 		}
 	}
+	private function SQLselectOrderFromOrderNo ($orderNo, &$result){
+		$stmt = $this->db->prepare("SELECT * FROM 'order' WHERE orderNo=:orderNo;");
+		$stmt->bindParam(':orderNo', $orderNo, PDO::PARAM_INT);
+		try{
+			$this->query2($stmt, $rows);
+			$result = $rows[0];
+		}catch(Exception $e){
+			//TODO;
+			$this->fatalError($e);
+		}
+	}
 	/**
 	 *Function: is_menu($menuID, &$result)
 	 *Arguments	  :	int	$menuID::メニュー識別子
@@ -405,7 +416,7 @@ class DB{
 	 */
 	public function updateOrderStatusToComplete($orderNo){
 		if(!$this->numericCheck($orderNo))return DB_UPDATE_ERROR;
-		$stmt = $this->prepare("UPDATE 'order' SET complete = 1, completeDate=:completeDate WHERE (orderNo = :orderNo");
+		$stmt = $this->db->prepare("UPDATE 'order' SET complete = 1, completeDate=:completeDate WHERE orderNo = :orderNo");
 		$stmt->bindValue(':completeDate', time());
 		$stmt->bindParam(':orderNo', $orderNo);
 		$this->execute($stmt);
@@ -519,7 +530,7 @@ class DB{
 	 *Arguments	  :	int		$orderNo::オーダー番号
 	 *							array	$returnArray::結果を返す
 	 *Return        : ERROR_CODE|NO_ERROR
-	 *Date          : 2015/09/25
+	 *Date          : 2015/10/5
 	 *Comment  :指定されたオーダー番号のオーダー情報を返す
 	 *
 		array(1) {
@@ -537,22 +548,36 @@ class DB{
 		}
 	 */
 	function getOrder($orderNo, &$returnArray){
-		$sql = sprintf("SELECT * FROM 'order' WHERE orderNo=%d;", $orderNo);
-		$this->fetch($sql, $returnArray);
-			$returnArray = $returnArray[0];
+		$this->SQLselectOrderFromOrderNo($orderNo, $returnArray);
+		/*$stmt = $this->db->prepare("SELECT * FROM 'order' WHERE orderNo=?;");
+		$stmt->bindParam(1, $orderNo, PDO::PARAM_STR);
+		$stmt->execute();
+		$returnArray = $stmt->fetchAll();*/
+		//$sql = sprintf("SELECT * FROM 'order' WHERE orderNo=%d;", $orderNo);
+		//$this->fetch($sql, $returnArray);
 		return OK;
 	}
 
 	function getOrderAll(){
-		$sql = sprintf("SELECT * FROM 'order' WHERE complete = 0;");
-		$this->fetch($sql, $returnArray);
+		$stmt = $this->db->prepare("SELECT * FROM 'order' WHERE complete = 0;");
+		$stmt->execute();
+		$returnArray = $stmt->fetchAll();
+		//$sql = sprintf("SELECT * FROM 'order' WHERE complete = 0;");
+		//$this->fetch($sql, $returnArray);
 		return $returnArray;
 	}
-
+	function getOrderAllIncludeNotComplete(){
+		$stmt = $this->db->prepare("SELECT * FROM 'order';");
+		$stmt->execute();
+		$returnArray = $stmt->fetchAll();
+		return $returnArray;
+	}
 	function parseOrderToString($orderArray){
+		define('ORDER_QUERY_MENU_PREFIX', 'm');
+		define('ORDER_QUERY_NUMBER_PREFIX', 'o');
 		$order_str = "";
 		foreach($orderArray as $key => $val){//登録
-			$order_str .= 'm'.$key.'o'.$val;
+			$order_str .= ORDER_QUERY_MENU_PREFIX.$key.ORDER_QUERY_NUMBER_PREFIX.$val;
 		}
 		return $order_str;
 	}
@@ -847,6 +872,7 @@ EOM;
 			}
 			$html .="</tr></tbody></table>";
 		}
+		$html .= "<br><a href=\"".INDEX_PAGE."\">Top</a>";
 		echo $html;
 	}
 	function drawOrderNum(){
@@ -886,42 +912,36 @@ EOM;
 				countOrder();
 		}
 		function countOrder(){
-				var order = document.getElementById("order").value;
-				var arr = [];
-				i = 0;
-				do{
-					if(order[i] == 'm'){
-						var orderStr = 0;
-						for(++i;i < order.length && is_number(order[i]);i++){
-							orderStr *= 10;
-							orderStr += order[i];
-						}
-						orderStr = parseInt(orderStr,10);
-						if(order[i] == 'o'){
-							var orderNum = 0;
-							if(order[++i] == "-"){
-								for(++i;i < order.length && is_number(order[i]);i++){
-									orderNum = parseInt(orderNum,10);
-									orderNum *= 10;
-									orderNum -= order[i];
-								}
-							orderNum = parseInt(orderNum,10);
-							}
-							else{
-								for(i;i < order.length && is_number(order[i]);i++){
-									order[i] *= 10;
-									orderNum = parseInt(orderNum,10);
-									order[i]= parseInt(order[i],10);
-									orderNum += order[i];
-								}
-							orderNum = parseInt(orderNum,10);
-							}
-						}
-					if(!arr[orderStr]){
-						arr[orderStr] = 0;
-					}
-					arr[orderStr] = arr[orderStr]+ orderNum;
+		var order = document.getElementById("order").value;
+		var arr = [];
+		i = 0;
+		do{
+			if(order[i] == 'm'){
+				var menuID = "0";
+				for(++i;i < order.length && is_number(order[i]);i++){
+				menuID += order[i];
 				}
+				menuID = parseInt(menuID,10);
+				if(order[i] == 'o'){
+					var orderNum = "0";
+					if(is_number(order[++i])){
+						for(i;i < order.length && is_number(order[i]);i++){
+							orderNum += order[i];
+						}
+						orderNum = parseInt(orderNum,10);
+					}else if(order[i] == '-'){
+						for(++i;i < order.length && is_number(order[i]);i++){
+							orderNum = parseInt(orderNum,10);
+							orderNum -= order[i];
+						}
+						orderNum = parseInt(orderNum,10);
+					}
+				}
+				if(!arr[menuID]){
+					arr[menuID] = 0;
+				}
+				arr[menuID] = arr[menuID]+ orderNum;
+			}
 			else{
 				i++;
 			}
@@ -929,8 +949,8 @@ EOM;
 		for(var key in arr) {
 			document.getElementById('order_'+key).innerHTML = arr[key];
 		}
-				optimizeOrder(arr);
-				calcPrice(arr);
+		optimizeOrder(arr);
+		calcPrice(arr);
 	}
 	function calcPrice(arr){
 				var price = 0;
@@ -1156,6 +1176,5 @@ EOT;
 		fclose($fp);
 	}
 }
-$d = new DB();
-$d->getOrder(1, $retuenArray);
+
 ?>
