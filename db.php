@@ -75,19 +75,57 @@ class DB{
 			return NO_ERROR;
 	}
 
-	function error($e, $errorCode){
+	private function error($e, $errorCode){
 		echo $e->getTraceAsString();
 		echo $e->getMessage();
 		return $errorCode;
 	}
-	function viewError($e, $errorCode){
+	private function viewError($e, $errorCode){
 		echo $e->getTraceAsString();
 		echo $e->getMessage();
 		return $errorCode;
 	}
-	function fatalError($e){
+	private function fatalError($e){
 		var_dump($e);
 		die();
+	}
+	/**【未実装】
+	 *Function: numericCheck(&$any)
+	 *Arguments	  :	var $any::なんでもよい
+	 *Return        : true|false
+	 *Date          : 2015/09/27
+	 *Comment  :数値かどうかを判定する(今後機能追加の可能性あるため関数化)
+	 */
+	public function numericCheck(&$any){
+		if(is_numeric($any)){
+			$any = intval($any);
+			return true;
+		}
+		return false;
+	}
+	/**【未実装】
+	 *Function: escap(&$str)
+	 *Arguments	  :	string $str::エスケープする文字列
+	 *Return        : true|false
+	 *Date          : 2015/09/25
+	 *Comment  :文字列をエスケープ(今後機能追加の可能性あるため関数化)
+	 */
+	private function escape(&$str){
+		$res = strip_tags($str);
+		$res = htmlspecialchars($res, ENT_QUOTES);
+		$str = $res;
+		return true;
+	}
+	/**
+	 *Function:deleteSpace(&$str)
+	 *Arguments	  :	string		$str::文字列
+	 *Return        : void
+	 *Date          : 2015/09/25
+	 *Comment  :$strから全角・半角sp・タブを除去
+	 */
+	static public function deleteSpace(&$str){
+		preg_replace('/(\s|　|\t)/', '', $str);
+		return;
 	}
 	/**
 	 *Function: exec($sql)
@@ -146,47 +184,7 @@ class DB{
 		}
 		return;
 	}
-
-
-	/**
-	 *Function: numericCheck(&$any)
-	 *Arguments	  :	var $any::なんでもよい
-	 *Return        : true|false
-	 *Date          : 2015/09/27
-	 *Comment  :数値かどうかを判定する(今後機能追加の可能性あるため関数化)
-	 */
-	public function numericCheck(&$any){
-		if(is_numeric($any)){
-			$any = intval($any);
-			return true;
-		}
-		return false;
-	}
-	/**【未実装】
-	 *Function: escap(&$str)
-	 *Arguments	  :	string $str::エスケープする文字列
-	 *Return        : true|false
-	 *Date          : 2015/09/25
-	 *Comment  :文字列をエスケープ(今後機能追加の可能性あるため関数化)
-	 */
-	private function escape(&$str){
-		$res = strip_tags($str);
-		$res = htmlspecialchars($res, ENT_QUOTES);
-		$str = $res;
-		return true;
-	}
-	/**
-	 *Function:deleteSpace(&$str)
-	 *Arguments	  :	string		$str::文字列
-	 *Return        : void
-	 *Date          : 2015/09/25
-	 *Comment  :$strから全角・半角sp・タブを除去
-	 */
-	static public function deleteSpace(&$str){
-		preg_replace('/(\s|　|\t)/', '', $str);
-		return;
-	}
-	function fetch($sql, &$returnArray){
+	private function fetch($sql, &$returnArray){
 		$this->query($sql, $result);
 		$returnArray = $result->fetchAll();
 		if($returnArray == FALSE) throw new Exception('DBfetchError'.__FUNCTION__);
