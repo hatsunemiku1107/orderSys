@@ -305,10 +305,14 @@ class DB{
 	 */
 	public function updateMenuPriceChange($menuID, $price){
 		if(!$this->numericCheck($menuID)  && $this->numericCheck($price) )return DB_UPDATE_ERROR;
-		$stmt = $this->prepare("UPDATE menu SET price=:price WHERE id =:id");
-		$stmt->bindParam(':price', $price);
-		$stmt->bintParam(':id', $menuID);
-		$this->execute($stmt);
+		try{
+			$stmt = $this->prepare("UPDATE menu SET price=:price WHERE id =:id");
+			$stmt->bindParam(':price', $price);
+			$stmt->bintParam(':id', $menuID);
+			$stmt->execute();
+		}catch(exception $e){
+			$this->fatalError($e);
+		}
 		return NO_ERROR;
 	}
 	/**
@@ -321,12 +325,14 @@ class DB{
 	 */
 	public function updateMenuFullName($menuID,$menu_full){
 		if(!$this->numericCheck($menuID) )return DB_UPDATE_ERROR;
-		$stmt = $this->prepare("UPDATE menu SET menu_full = ':full' WHERE id =:id");
-		$stmt->bindParam(':full', $menu_full);
-		$stmt->bintParam(':id', $menuID);
-		$this->execute($stmt);
-		//$sql = sprintf("UPDATE menu SET menu_full = '%s' WHERE id = '%d'" ,$menu_full, $menu);
-		//$this->exec($sql);
+		try{
+			$stmt = $this->prepare("UPDATE menu SET menu_full = ':full' WHERE id =:id");
+			$stmt->bindParam(':full', $menu_full);
+			$stmt->bintParam(':id', $menuID);
+			$stmt->execute();
+		}catch(Exception $e){
+			$this->fatalError($e);
+		}
 		return NO_ERROR;
 	}
 	/**
