@@ -24,18 +24,21 @@ define('DB_GET_MENU_ERROR', 400);
 //DBの名前
 define('DATABASE_NAME', 'db.db');
 class DB{
-
+	//クラス変数
 	private $db = null;
-
 	//コンストラクタ
 	function __construct(){
-		try{
+		try{//DBに接続
 			$this->db = new PDO('sqlite:'.DATABASE_NAME);
+			//Exceptionを吐くように
 			$this->db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+			//fetchの時連想配列を返すように
 			$this->db->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
 		} catch (PDOException $e) {
+			//接続失敗
 			die ('Connection failed : '.$e->getMessage());
 		}
+		//初期化処理(テーブル作成)
 		$this->initalize();
 	}
 	//デストラクタ
@@ -46,10 +49,10 @@ class DB{
 	 *Function: initialize(void)
 	 *Arguments	  : なし
 	 *Return        : OK|NG
-	 *Date          : 2015/09/25
+	 *Date          : 2015/10/21
 	 *Comment  :
 	 */
-	public function initalize(){
+	private function initalize(){
 		$sql = 'CREATE TABLE IF NOT EXISTS `order` ('.
   						"`orderNo` INTEGER PRIMARY KEY UNIQUE NOT NULL,".
   						"`orderQuery` TEXT NOT NULL,".
@@ -62,9 +65,11 @@ class DB{
   						"`explain` TEXT NOT NULL,".
   						"`price` INTEGER NOT NULL,".
   						"`sold_out` INTEGER NOT NULL DEFAULT 0);";
-			if($this->exec($sql) == NG)return NG;
-			return OK;
+			$stmt = $this->db->prepare($sql);
+			$stmt->execute();
+			return NO_ERROR;
 	}
+
 	function error($e, $errorCode){
 		echo $e->getTraceAsString();
 		echo $e->getMessage();
