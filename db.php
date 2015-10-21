@@ -218,13 +218,12 @@ class DB{
 	 *Arguments	  :	int	$menuID::メニュー識別子
 	 *							bool	$result::存在(true|false)
 	 *Return        : ERROR_CODE|NO_ERROR
-	 *Date          : 2015/10/4
+	 *Date          : 2015/10/21
 	 *Comment  :メニューがすでに存在するか？
 	 */
 	public function is_menu($menuID, &$result){
 		//数値ではない
-			if(!$this->numericCheck($menuID))return NOT_NUMERIC_ERROR;
-		//
+		if(!$this->numericCheck($menuID))return NOT_NUMERIC_ERROR;
 		try{
 				$stmt =$this->db->prepare("SELECT COUNT(*) FROM 'menu' WHERE id=:id;");
 				$stmt->bindParam(':id', $menuID);
@@ -242,19 +241,21 @@ class DB{
 	 *							string	$explain::メニューの説明
 	 *							int		$price::価格
 	 *Return        : ERROR_CODE|NO_ERROR
-	 *Date          : 2015/10/4
+	 *Date          : 2015/10/21
 	 *Comment  :
 	 */
 	public function addMenu($menuID, $menu_full, $description, $price){
 		if(!($this->numericCheck($menuID))&& !($this->numericCheck($price)))return DB_ADD_MENU_ERROR;
-		$stmt = $this->db->prepare("INSERT INTO menu(id, menu_full, explain, price ) VALUES (:id,:full, :desc, :price);");
-		$stmt->bindParam(':id', $menuID, PDO::PARAM_INT);
-		$stmt->bindParam(':full', $menu_full, PDO::PARAM_STR);
-		$stmt->bindParam(':desc', $description, PDO::PARAM_STR);
-		$stmt->bindParam(':price', $price, PDO::PARAM_INT);
-		$stmt->execute();
-		//$sql = sprintf("INSERT INTO menu(id, menu_full, explain, price ) VALUES (%d,'%s', '%s', %d);", $menuID, $menu_full, $explain, $price);
-		//$this->exec($sql);
+		try{
+			$stmt = $this->db->prepare("INSERT INTO menu(id, menu_full, explain, price ) VALUES (:id,:full, :desc, :price);");
+			$stmt->bindParam(':id', $menuID, PDO::PARAM_INT);
+			$stmt->bindParam(':full', $menu_full, PDO::PARAM_STR);
+			$stmt->bindParam(':desc', $description, PDO::PARAM_STR);
+			$stmt->bindParam(':price', $price, PDO::PARAM_INT);
+			$stmt->execute();
+		}catch(Exception $e){
+			$this->fatalError($e);
+		}
 		return NO_ERROR;
 	}
 	/**
@@ -266,13 +267,16 @@ class DB{
 	 */
 	public function deleteMenu($menuID){
 		if(!$this->numericCheck($menuID))return DB_DELETE_ERROR;
-		$stmt = prepare("DELETE FROM menu WHERE id = ?;");
-		$stmt->bindParam(1, $menuID, PDO::PARAM_INT);
-		$this->execute($stmt);
-		//$sql = sprintf("DELETE FROM menu WHERE id = %d", $menuID);
-		//$this->exec($sql);
+		try{
+			$stmt = prepare("DELETE FROM menu WHERE id = ?;");
+			$stmt->bindParam(1, $menuID, PDO::PARAM_INT);
+			$this->execute($stmt);
+		}catch(Execute $e){
+			$this->fatalError($e);
+		}
 		return NO_ERROR;
 	}
+
 	public function updateMenuStatus($menuID, $status){
 		$stmt = $this->db->prepare("UPDATE menu SET sold_out = :sold WHERE id = :id");
 		$stmt->bindParam('sold', $status, PDO::PARAM_INT);
@@ -289,8 +293,6 @@ class DB{
 	public function updateMenuSoldOut($menuID){
 		if(!$this->numericCheck($menuID))return DB_UPDATE_ERROR;
 		$this->updateMenuStatus($menuID, 1);
-		//$sql = sprintf("UPDATE menu SET sold_out = 1 WHERE id = %d" ,$menuID);
-		//$this->db->exec($sql);
 		return NO_ERROR;
 	}
 	/**
@@ -307,8 +309,6 @@ class DB{
 		$stmt->bindParam(':price', $price);
 		$stmt->bintParam(':id', $menuID);
 		$this->execute($stmt);
-		//$sql = sprintf("UPDATE menu SET price=%d WHERE id = %d" ,$price, $menuID);
-		//$this->exec($sql);
 		return NO_ERROR;
 	}
 	/**
