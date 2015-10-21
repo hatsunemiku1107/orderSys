@@ -222,12 +222,18 @@ class DB{
 	 *Comment  :メニューがすでに存在するか？
 	 */
 	public function is_menu($menuID, &$result){
+		//数値ではない
 			if(!$this->numericCheck($menuID))return NOT_NUMERIC_ERROR;
-			$this->SQLselectMenuFromId($menuID, $rows);
-			//$sql = sprintf("SELECT * FROM 'menu' WHERE id=%d;", $menuID);
-			//$this->fetch($sql, $rows);
-			$result = (count($rows) > 0)?true:false;
-			return NO_ERROR;
+		//
+		try{
+				$stmt =$this->db->prepare("SELECT COUNT(*) FROM 'menu' WHERE id=:id;");
+				$stmt->bindParam(':id', $menuID);
+				$stmt->execute();
+		}catch(Exception $e){
+			$this->fatalError($e);
+		}
+		$result = ($stmt->fetchColumn() == 1)?true:false;
+		return NO_ERROR;
 	}
 	/**
 	 *Function: addMenu($menuID, $menu_full)
