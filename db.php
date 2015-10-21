@@ -911,6 +911,10 @@ EOM;
 			document.getElementById("order").value +="m"+order +"o"+ '1';
 				countOrder();
 		}
+		function delOrder(order){
+			document.getElementById("order").value +="m"+order +"o"+ '-1';
+				countOrder();
+		}
 		function countOrder(){
 		var order = document.getElementById("order").value;
 		var arr = [];
@@ -974,7 +978,7 @@ EOT;
 			$explain = $this->menu[$i]['explain'];
 			$price = $this->menu[$i]['price'];
 			echo<<<EOT
-			<button onclick="addOrder('$menuID');">
+			<button RightMouseDown=";" onclick="delOrder('$menuID');" >
 				<table border="1">
 					<thead>
 						<th>$fullName</th>
