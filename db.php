@@ -7,6 +7,7 @@ define ('NG',-1);
 define ('NO_ERROR', 0);
 define ('ERROR', -1);
 define('DB_CREATE_TABLE_ERROR', 99);
+define('DB_INITIALIZE_ERROR', 98);
 define ('DB_MAKE_ERROR', 100);
 define ('DB_ADD_ERROR',	101);
 define('DB_ADD_ARRAY_ERROR', 102);
@@ -65,8 +66,12 @@ class DB{
   						"`explain` TEXT NOT NULL,".
   						"`price` INTEGER NOT NULL,".
   						"`sold_out` INTEGER NOT NULL DEFAULT 0);";
-			$stmt = $this->db->prepare($sql);
-			$stmt->execute();
+		try{
+				$stmt = $this->db->prepare($sql);
+				$stmt->execute();
+		}catch(Excption $e){
+			$this->viewError($e, DB_INITIALIZE_ERROR);
+		}
 			return NO_ERROR;
 	}
 
@@ -76,6 +81,11 @@ class DB{
 		return $errorCode;
 	}
 
+	function viewError($e, $errorCode){
+		echo $e->getTraceAsString();
+		echo $e->getMessage();
+		return $errorCode;
+	}
 	/**
 	 *Function: exec($sql)
 	 *Arguments	  : string $sql::sqlQueryString
