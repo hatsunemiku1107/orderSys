@@ -80,11 +80,14 @@ class DB{
 		echo $e->getMessage();
 		return $errorCode;
 	}
-
 	function viewError($e, $errorCode){
 		echo $e->getTraceAsString();
 		echo $e->getMessage();
 		return $errorCode;
+	}
+	function fatalError($e){
+		var_dump($e);
+		die();
 	}
 	/**
 	 *Function: exec($sql)
@@ -144,10 +147,7 @@ class DB{
 		return;
 	}
 
-	function fatalError($e){
-		var_dump($e);
-		die();
-	}
+
 	/**
 	 *Function: numericCheck(&$any)
 	 *Arguments	  :	var $any::なんでもよい
